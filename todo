@@ -204,7 +204,7 @@ def list_entries(action)
     # I need to figure out a better way to display my files via YAML
     # and display the title for the user to pick one and then figure
     # out how to modify it.. It works the way I have it now but it 
-    # involves rereading the files a few times.
+    # involves rereading the files a few times
 
     # If nothing is specified, set it to read
     if action == ""
