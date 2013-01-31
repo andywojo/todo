@@ -9,3 +9,24 @@ The inspiration for writing this was simple:
 *  I love ruby and want to keep learning.
 
 
+1. List all of your todo tasks
+
+        todo -le
+        Action => reading
+
+        Choices:
+        1) Add remove function to todo
+        2) Testing todo
+
+        Choice => 1
+
+
+        ------------------------------------
+
+        Title: Add remove function to todo
+
+        Description: Just realized I don't have a remove function intodo. Need to implement.
+
+        Priority: 7
+
+ 
