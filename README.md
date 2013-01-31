@@ -9,9 +9,12 @@ The inspiration for writing this was simple:
 *  I love ruby and want to keep learning.
 
 
+
+Examples
+------------------------
 1. List all of your todo tasks
 
-        todo -le
+        andysource:~ $ todo -le
         Action => reading
 
         Choices:
@@ -29,4 +32,19 @@ The inspiration for writing this was simple:
 
         Priority: 7
 
- 
+2. Create a new task
+
+        andysource:~ $ todo -cr
+        Action => creating
+
+        ## New Entry
+        Title: Add in update task function
+
+
+        Description: Need to add the update task. It's nearly done, just need to implement it.
+
+
+        Priority (1-10): 8
+
+        Successfully wrote /home/awojnarek/.todo/1359594990.entry
+
