@@ -1,0 +1,316 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+require 'optparse'
+require 'yaml'
+
+#############
+# Variables #
+#############
+
+
+
+
+#############
+# Functions #
+#############
+
+# Check and see if the repo exists
+def repo_exists()
+  home = ENV['HOME']
+  path = "#{home}/.todo"
+
+  begin
+    if File.directory?(path)
+      return true
+    else
+      return false
+    end
+  rescue => e
+    return "error => #{e}"
+  end
+end
+
+
+
+# Create repo
+def repo_create()
+  home = ENV['HOME'] 
+  path = "#{home}/.todo"
+
+  begin
+    # Create directory
+    Dir::mkdir(path) unless File.directory?(path)
+
+    # Raise if not created
+    raise "can not create #{path}" unless repo_exists == true
+
+    puts "#{home}/.todo created"
+  rescue => msg
+    puts "Could not create repo: #{msg}"
+    exit
+  end
+end
+
+
+
+
+
+def get_current_epoch()
+  begin
+    # Time right now
+    t = Time.now
+
+    # Convert to epoch
+    epoch = t.to_i 
+
+    ## Should probably have some sort of error checking here.
+
+    # Return our value
+    return epoch
+  rescue => msg
+    puts "Could not find epoch time: #{msg}"
+    exit
+  end
+end
+
+
+
+
+
+def create_entry()
+  begin
+    # Get current epoch time
+    time = get_current_epoch 
+
+    # Get home directory
+    home = ENV['HOME']
+
+    # Make sure our repo exists 
+    while ! repo_exists == true
+      puts "todo repo doesn't exist. creating repo"
+      repo_create
+    end
+
+    # Update the file location
+    file = "#{home}/.todo/#{time}.entry"
+  
+    # Get text
+    printf "\n\n## New Entry\n"
+    printf "Title: "
+    title = gets.chomp
+
+    printf "\n\nDescription: "
+    desc  = gets.chomp
+
+    printf "\n\nPriority (1-10): "
+    prior = gets.chomp
+
+    # Populate hash
+    data = {
+      "title" => "#{title}",
+      "desc"  => "#{desc}",
+      "prior" => "#{prior}", 
+    }
+
+    # Write to file    
+    File.open(file, 'w+') {|f| f.write(data.to_yaml) }
+
+    printf "\nSuccessfully wrote #{file}\n"
+    read_entry(file)
+
+  rescue => msg
+    puts "Could not create entry #{file} => #{msg}"
+    exit
+  end
+end
+
+
+
+
+def read_entry(file)
+  begin
+    data = YAML.load(File.read(file))
+  
+    printf "\n------------------------------------\n"
+ 
+    # Read the title, description and priority  
+    printf "\nTitle: #{data["title"]}\n"
+    printf "\nDescription: #{data["desc"]}\n"
+    printf "\nPriority: #{data["prior"]}\n"
+
+    # If there are updates, list them seperately
+    update = data.map{|k,v| "#{k} #{v}"}.join(' ')
+    if update =~ /update_/
+      printf "\n\nUpdates:\n"
+      data.each do |k,v|
+        if k =~ /^update_/
+          time = Time.at(k.split("_")[1].to_i).strftime("%m/%d/%Y %I:%M%p") 
+          printf "#{time}: #{v}\n"
+        end
+      end
+    end
+  rescue => msg
+    puts "Could not read entry #{file}. Aborting => #{msg}"
+    exit 1
+  end
+end
+
+
+
+
+def read_yaml(file)
+  begin
+    data = YAML.load(File.read(file)) and return data
+  rescue => msg
+    puts "Could not read entry file #{file}. Aborting => #{msg}"
+    exit 1
+  end
+end
+
+
+
+def update_entry(file)
+  begin
+    # Get current time
+    time = get_current_epoch
+
+    # Read repo file
+    data = read_yaml(file)
+
+    # Read the file
+    read_entry(file)
+
+    # Get text from user
+    printf "\n\n## Add new entry\n"
+    printf "Update: "
+    update_text = $stdin.gets.chomp
+
+    # Add text to hash and merge with existing data
+    update = { "update_#{time}" => "#{update_text}" } and data.merge!(update)
+
+    # Write out our yaml to the file.
+
+    File.open(file, 'w+') {|f| f.write(data.to_yaml) }
+ rescue => msg
+   puts "Failed to update entry #{file} => #{msg}"
+   exit
+ end
+end
+
+
+def list_entries(action)
+  begin
+    # I need to figure out a better way to display my files via YAML
+    # and display the title for the user to pick one and then figure
+    # out how to modify it.. It works the way I have it now but it 
+    # involves rereading the files a few times.
+
+    # If nothing is specified, set it to read
+    if action == ""
+      action = "read"
+    end
+    # Define array to use below
+    entries = Array.new
+
+    # Define file dynamically assigned below by user
+    entry   = nil
+
+    # Action to do
+    printf "Action => #{action}ing\n\n"
+ 
+    # Get home directory
+    home = ENV['HOME']
+    path = "#{home}/.todo"
+
+    # Make sure repo exists
+    while ! repo_exists == true
+      repo_create
+    end
+
+    # Initial array of all the files
+    list_of_files = Dir.glob("#{path}/*.entry")
+
+    if list_of_files.empty?
+      puts "No entries in #{path}"
+      exit
+    end
+
+
+    # Let's map our files to the title names
+    list_of_files.each do |f|
+      data = read_yaml(f) 
+      entries.push("#{data["title"]}")
+    end
+
+
+    # Display menu
+    choice = user_menu_choice(entries)
+
+
+    # Take choice, figure out what file it belongs to    
+    list_of_files.each do |f|
+      data = read_yaml(f)
+      if choice == data["title"]
+        entry = f 
+      end
+    end
+
+    # 
+    if action == "modify" 
+      update_entry(entry)
+    end
+
+    if action == "read"
+      read_entry(entry)
+    end
+
+    if action == "update"
+      update_entry(entry)
+    end
+
+  rescue => msg
+    puts "Failed to list entries => #{msg}"
+    exit
+  end
+end
+
+
+# Menu functions taken from Catnapper on StackOverflow
+def array_to_menu_hash(arr)
+  Hash[arr.each_with_index.map { |e, i| [i+1, e] }]
+end
+
+def print_menu(menu_hash)
+  puts 'Choices:'
+  menu_hash.each { |k,v| puts "#{k}) #{v}" }
+  puts
+end
+
+def get_user_menu_choice(menu_hash)
+  print 'Choice => '
+  number = STDIN.gets.strip.to_i
+  menu_hash.fetch(number, nil)
+end
+
+def show_menu(menu_hash)
+  print_menu menu_hash
+  get_user_menu_choice menu_hash
+end
+
+def user_menu_choice(choice_array)
+  until choice = show_menu(array_to_menu_hash(choice_array)); end
+  choice
+end
+
+#################
+# Option parser #
+#################
+options = {}
+OptionParser.new do |o|
+  o.on('-le') { list_entries "#{ARGV[0]}" } 
+  o.on('-cr') { create_entry  }
+  o.on('-up') { list_entries "update"  }
+  o.on('-h') { puts o; exit }
+  o.parse!
+end
