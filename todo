@@ -199,6 +199,20 @@ def update_entry(file)
 end
 
 
+
+def remove_entry(file)
+  begin
+    while File.exist?(file) == true
+      FileUtils.rm(file)
+    end
+ rescue => msg
+   puts "Failed to remove entry #{file} => #{msg}"
+   exit
+ end
+end
+
+
+
 def list_entries(action)
   begin
     # I need to figure out a better way to display my files via YAML
@@ -269,6 +283,10 @@ def list_entries(action)
       update_entry(entry)
     end
 
+    if action == "remove" 
+      remove_entry(entry)
+    end
+
   rescue => msg
     puts "Failed to list entries => #{msg}"
     exit
@@ -311,6 +329,7 @@ OptionParser.new do |o|
   o.on('-le') { list_entries "#{ARGV[0]}" } 
   o.on('-cr') { create_entry  }
   o.on('-up') { list_entries "update"  }
+  o.on('-rm') { list_entries "remove"  }
   o.on('-h') { puts o; exit }
   o.parse!
 end
